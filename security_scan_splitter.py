@@ -37,11 +37,15 @@ def get_servers():
             )
         except StopIteration:
             continue
-        servers[external_ip] = dict(
-            name = server.name,
-            project = projects[server.project_id],
-            external_ip = external_ip
-        )
+        try:
+            servers[external_ip] = dict(
+                name = server.name,
+                project = projects[server.project_id],
+                external_ip = external_ip
+            )
+        except KeyError:
+            # Some servers have become detached from their projects
+            continue
     return servers
 
 
@@ -51,14 +55,14 @@ def get_vulnerabilities(xlsx_file):
     """
     return map(
         lambda v: dict(
-            server_ip = v[10],
-            title = v[3],
-            description = v[1],
-            impact = v[0],
-            probability = v[2],
-            cvss_score = v[4],
-            cvss_vector = v[7],
-            remediation = v[11],
+            server_ip = v[7],
+            title = v[0],
+            description = v[9],
+            impact = v[4],
+            probability = v[5],
+            cvss_score = v[1],
+            cvss_vector = v[2],
+            remediation = v[10],
         ),
         pandas.read_excel(xlsx_file).fillna('').itertuples(index = False)
     )
@@ -71,12 +75,19 @@ ENVIRONMENT.filters['markdown'] = lambda text: jinja2.Markup(markdown.markdown(t
 with open(os.path.join(HERE, 'project_report.html')) as f:
     TEMPLATE = ENVIRONMENT.from_string(f.read())
 
+
+VULN_LEVELS = ["critical", "high", "medium", "low", "info"]
+
 def render_project_pdf(project, vulnerabilities, output_path):
     """
     Renders a PDF report at the given path containing the given
     vulnerabilities for the given project.
     """
     logging.info("  %s", project)
+    # Sort the vulnerabilities by impact then cvss score
+    vulnerabilities.sort(key = lambda v: (VULN_LEVELS.index(v['impact'].lower()), 10 - v['cvss_score']))
+    # Exclude vulnerabilities of level "Info"
+    vulnerabilities = [v for v in vulnerabilities if v['impact'].lower() != "info"]
     html = TEMPLATE.render(
         project = project,
         vulnerabilities = vulnerabilities,

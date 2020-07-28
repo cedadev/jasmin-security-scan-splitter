@@ -78,6 +78,7 @@
                 border-bottom: 0;
                 margin-bottom: 0;
                 width: 100%;
+                table-layout: fixed;
             }
             .vulnerability table th, .vulnerability table td {
                 border-bottom: 0;
@@ -88,8 +89,9 @@
             .vulnerability table th {
                 white-space: nowrap;
                 text-align: right;
-                width: 1%;
+                width: 30%;
             }
+            .vulnerability table td { overflow-wrap: break-word; }
         </style>
     </head>
     <body>
@@ -144,7 +146,7 @@
                     </tr>
                     <tr>
                         <th>Suggested Remediation</th>
-                        <td>{{ vul.remediation|default("-", true) }}</td>
+                        <td>{{ vul.remediation|default("-", true)|markdown }}</td>
                     </tr>
                 </table>
             </div>
